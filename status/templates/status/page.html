@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}{{ data.company.name }} status{% endblock %}
+
+{% block content %}
+<h1>{{ data.company.name }} status</h1>
+<p>{{ data.overall }}</p>
+
+<section>
+  <ul>
+    {% for component in data.components %}
+    <li>
+      {{ component.name }}
+      <span class="badge{% if component.status == 'operational' %} ok{% endif %}" style="margin-left: auto">{{ component.status|capfirst }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+
+<section>
+  <form method="post" action="{% url 'subscribe' %}">
+    {% csrf_token %}
+    <input name="email" type="email" required placeholder="you@example.com" aria-label="Email" value="{{ form.email.value|default:'' }}">
+    <button>Subscribe to updates</button>
+    {% if form.errors %}<p role="alert" class="alert">{{ form.email.errors.0 }}</p>{% endif %}
+    {% if message %}<p role="status" class="notice">{{ message }}</p>{% endif %}
+  </form>
+</section>
+
+<p class="muted"><small>Served on {{ request.get_host }}</small></p>
+{% endblock %}

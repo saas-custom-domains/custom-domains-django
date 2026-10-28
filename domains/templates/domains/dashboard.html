@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Statuspage dashboard{% endblock %}
+
+{% block content %}
+<h1>Statuspage dashboard</h1>
+<p class="muted">Connect a custom domain to each company's status page.</p>
+
+{% for company in companies %}
+<section data-testid="company-{{ company.slug }}">
+  <h2>{{ company.name }}</h2>
+  <ul>
+    {% for domain in company.custom_domains.all %}
+    <li data-testid="domain-{{ domain.host }}">
+      <code>{{ domain.host }}</code>
+      <span class="badge{% if domain.status == 'active' %} ok{% endif %}">{{ domain.label }}</span>
+      <form class="inline" method="post" action="{% url 'check_domain' domain.id %}" style="margin-left: auto">
+        {% csrf_token %}
+        <button class="link">Check DNS</button>
+      </form>
+      <form class="inline" method="post" action="{% url 'remove_domain' domain.id %}">
+        {% csrf_token %}
+        <button class="link alert">Remove</button>
+      </form>
+    </li>
+    {% endfor %}
+  </ul>
+  <form method="post" action="{% url 'add_domain' company.id %}">
+    {% csrf_token %}
+    <input name="host" required placeholder="status.example.com" aria-label="Domain">
+    <input name="dns_contact_email" type="email" placeholder="DNS contact (optional)" aria-label="DNS contact email">
+    <button>Add domain</button>
+    {% if company.error %}<p role="alert" class="alert">{{ company.error }}</p>{% endif %}
+  </form>
+</section>
+{% endfor %}
+{% endblock %}
