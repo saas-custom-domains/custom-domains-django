@@ -45,7 +45,7 @@ class SaasDomains:
 
 
 def api_error(exc):
-    """The API's message for a failed call, e.g. "Host has already been taken"."""
+    """The API's error message, e.g. "Host has already been taken"."""
     if isinstance(exc, requests.HTTPError):
         try:
             return exc.response.json()["error"]

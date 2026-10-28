@@ -7,7 +7,7 @@ from .utils import normalize_host
 
 
 def managed():
-    """True with SaaS Custom Domains, False if you run Caddy yourself."""
+    """False if you run your own Caddy instead of our proxy."""
     return settings.DOMAINS_PROVIDER == "saascustomdomains"
 
 
@@ -35,7 +35,8 @@ def add_custom_domain(company, host, dns_contact_email=""):
 def check_dns(domain):
     if managed() and domain.provider_uuid:
         res = SaasDomains().verify_dns(domain.provider_uuid)
-        dns_status = res["dns_status"]  # "valid", "pending" or "invalid"
+        # "valid", "pending" or "invalid"
+        dns_status = res["dns_status"]
     else:
         dns_status = "valid" if points_to_us(domain.host) else "invalid"
 

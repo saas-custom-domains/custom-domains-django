@@ -7,7 +7,7 @@ def host_from(request):
 
 
 def normalize_host(value):
-    """ "Status.Intercom.com." and " status.intercom.com" are the same host."""
+    # "Status.Intercom.com." and "status.intercom.com" are the same host
     host = value.strip().lower().rstrip(".")
     try:
         # Internationalized domains are stored as punycode.

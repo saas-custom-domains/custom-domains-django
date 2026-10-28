@@ -19,7 +19,9 @@ class Company(models.Model):
         return self.name
 
     def fetch_status_data(self):
-        degraded = [c for c in self.components if c["status"] != "operational"]
+        degraded = [
+            c for c in self.components if c["status"] != "operational"
+        ]
         return {
             "company": self,
             "components": self.components,

@@ -29,7 +29,10 @@ def dashboard(request, errors=None, status=200):
     for company in companies:
         company.error = (errors or {}).get(company.id)
     return render(
-        request, "domains/dashboard.html", {"companies": companies}, status=status
+        request,
+        "domains/dashboard.html",
+        {"companies": companies},
+        status=status,
     )
 
 
@@ -50,8 +53,8 @@ def add_domain(request, company_id):
         except ValidationError as e:
             error = " ".join(e.messages)
         except requests.RequestException as e:
-            logger.exception("Could not add %s", form.cleaned_data["host"])
-            error = api_error(e) or "Could not add the domain. Try again."
+            logger.exception("Could not add the domain")
+            error = api_error(e) or "Could not add the domain."
     return dashboard(request, errors={company.id: error}, status=400)
 
 
@@ -89,7 +92,9 @@ def saas_domains_webhook(request):
     # Events: https://docs.saascustomdomains.com/webhooks
     token = request.GET.get("token", "")
     expected = os.environ.get("SCD_WEBHOOK_TOKEN", "")
-    if not expected or not hmac.compare_digest(token.encode(), expected.encode()):
+    if not expected or not hmac.compare_digest(
+        token.encode(), expected.encode()
+    ):
         return HttpResponse(status=401)
 
     try:

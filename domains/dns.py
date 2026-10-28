@@ -5,8 +5,8 @@ import os
 import dns.exception
 import dns.resolver
 
-CNAME_TARGET = os.environ.get("CNAME_TARGET", "in.statuspage.com").lower()
-OUR_IPS = set(filter(None, os.environ.get("SERVER_IPS", "192.0.2.1").split(",")))
+CNAME_TARGET = os.environ.get("CNAME_TARGET", "in.statuspage.com")
+OUR_IPS = set(os.environ.get("SERVER_IPS", "192.0.2.1").split(","))
 
 
 def records(host, rtype):

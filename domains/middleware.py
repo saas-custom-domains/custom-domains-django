@@ -29,10 +29,10 @@ class ProxyTokenMiddleware:
             ):
                 return HttpResponseForbidden()
 
-            # The proxy sends your own hostname in Host. The token proves
-            # this request came through it, so hand Django the customer's
-            # domain instead: the CSRF Origin check, redirects and
-            # build_absolute_uri() all use request.get_host().
+            # Host is still your own hostname. The token proves the
+            # request came through the proxy, so give Django the
+            # customer's domain: the CSRF Origin check, redirects and
+            # build_absolute_uri() all read request.get_host().
             request.META["HTTP_HOST"] = served_for
 
         return self.get_response(request)

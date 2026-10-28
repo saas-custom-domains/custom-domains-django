@@ -1,4 +1,4 @@
-"""Settings for the Statuspage example: one Django app, many customer domains."""
+"""Settings for Statuspage: one Django app, many customer domains."""
 
 import os
 from pathlib import Path
@@ -7,11 +7,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 def env_list(name, default=""):
-    return [v.strip() for v in os.environ.get(name, default).split(",") if v.strip()]
+    values = os.environ.get(name, default).split(",")
+    return [v.strip() for v in values if v.strip()]
 
 
 def env_bool(name, default):
-    return os.environ.get(name, str(default)).lower() in ("1", "true", "yes")
+    value = os.environ.get(name, str(default)).lower()
+    return value in ("1", "true", "yes")
 
 
 SECRET_KEY = os.environ.get("SECRET_KEY", "dev-only-not-secret")
@@ -39,8 +41,12 @@ if env_bool("TRUST_X_FORWARDED_PROTO", True):
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 # "saascustomdomains" (the default) or "caddy" to run your own proxy.
-DOMAINS_PROVIDER = os.environ.get("DOMAINS_PROVIDER", "saascustomdomains")
-SCD_API_URL = os.environ.get("SCD_API_URL", "https://app.saascustomdomains.com")
+DOMAINS_PROVIDER = os.environ.get(
+    "DOMAINS_PROVIDER", "saascustomdomains"
+)
+SCD_API_URL = os.environ.get(
+    "SCD_API_URL", "https://app.saascustomdomains.com"
+)
 
 INSTALLED_APPS = [
     "companies",

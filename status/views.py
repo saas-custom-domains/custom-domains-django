@@ -10,15 +10,18 @@ def status_page(request, form=None, message=None):
     return render(
         request,
         "status/page.html",
-        {"data": data, "form": form or SubscribeForm(), "message": message},
+        {
+            "data": data,
+            "form": form or SubscribeForm(),
+            "message": message,
+        },
     )
 
 
 @require_POST
 def subscribe(request):
-    # The company comes from the hostname (CustomDomainMiddleware), never
-    # from the form, so one customer's page can't subscribe people to
-    # another's.
+    # The company comes from the hostname, never from the form, so one
+    # customer's page can't subscribe people to another's.
     form = SubscribeForm(request.POST)
     if not form.is_valid():
         return status_page(request, form=form)
