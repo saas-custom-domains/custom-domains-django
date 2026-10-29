@@ -63,14 +63,6 @@ def test_webhook_ignores_other_events_and_unknown_domains(client, domain):
     assert res.status_code == 200
 
 
-def test_caddy_ask(client, domain):
-    assert client.get("/caddy/ask?domain=status.intercom.com").status_code == 404
-    domain.status = "active"
-    domain.save()
-    assert client.get("/caddy/ask?domain=Status.Intercom.com").status_code == 200
-    assert client.get("/caddy/ask?domain=evil.example").status_code == 404
-
-
 def test_dashboard_shows_errors_next_to_the_company(client, intercom):
     res = client.post(f"/companies/{intercom.id}/domains", {"host": "admin.statuspage.com"})
     assert res.status_code == 400

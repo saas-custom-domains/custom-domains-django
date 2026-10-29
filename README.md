@@ -10,7 +10,7 @@ What's in it:
 - Requests from the [SaaS Custom Domains](https://saascustomdomains.com) proxy are accepted only with the upstream's auth token, so nobody can claim a customer's domain by sending `X-Served-For` themselves.
 - Forms on custom domains pass Django's CSRF check behind the proxy (see [Forms behind the proxy](#forms-behind-the-proxy-origin-checking-failed)).
 - A dashboard to add a domain, check its DNS and remove it. Webhooks update the status.
-- Two ways to run HTTPS: SaaS Custom Domains (default), or your own Caddy with on-demand TLS.
+- SaaS Custom Domains issues and renews the HTTPS certificate for every customer domain, so the app has no TLS code.
 
 ## Run it in 2 minutes
 
@@ -32,7 +32,7 @@ The mock is [scd-mock](https://github.com/saas-custom-domains/scd-mock): a local
 
 ### Without Docker
 
-You need Python 3.12 or newer.
+You need Python 3.12 or newer, and Docker for the mock.
 
 ```bash
 python3 -m venv .venv && . .venv/bin/activate
@@ -41,9 +41,14 @@ cp .env.example .env
 set -a && . ./.env && set +a
 python manage.py migrate
 python manage.py runserver
+
+# in another terminal: the mock, pointed at the app on your machine
+SCD_MOCK_UPSTREAM_HOST=host.docker.internal \
+SCD_MOCK_WEBHOOK_URL=http://host.docker.internal:8000/webhooks/saas-domains \
+docker compose up scd-mock
 ```
 
-Without the mock, set `DOMAINS_PROVIDER=caddy` in `.env` so adding a domain doesn't call the API. Add `intercom.localhost`, click "Check DNS" (`*.localhost` domains count as pointed at you) and open http://intercom.localhost:8000.
+Then follow the same steps: add `intercom.localhost` at http://localhost:8000 and open http://intercom.localhost.
 
 ## How it works
 
@@ -61,10 +66,9 @@ Browser ── status.intercom.com ──▶ SaaS Custom Domains ──▶ your 
 | `domains/models.py` | `CustomDomain`: normalized, unique host, status, reserved-domain check |
 | `statuspage/urls_custom_domains.py` | The only URLs a custom domain can reach |
 | `status/views.py` | The status page and its subscribe form |
-| `domains/services.py` | Add, check and remove domains with either provider |
+| `domains/services.py` | Add, check and remove domains through the API |
 | `domains/saas_domains.py` | API client for SaaS Custom Domains (`requests`) |
-| `domains/dns.py` | DNS check for when you run Caddy yourself (`dnspython`) |
-| `domains/views.py` | Dashboard, webhook endpoint, Caddy's ask endpoint, health check |
+| `domains/views.py` | Dashboard, webhook endpoint, health check |
 
 Settings that matter, in `statuspage/settings.py`: `APP_HOSTS` (hosts that serve the app itself), `APP_DOMAIN` (customers can't claim it), `ALLOWED_HOSTS = ["*"]` and `SECURE_PROXY_SSL_HEADER`.
 
@@ -106,26 +110,12 @@ Load balancers and Docker call the health check by IP address, and the mock (lik
 
 ### Locally: the mock is plain HTTP
 
-The mock proxy sends `X-Forwarded-Proto: https` like production, but it speaks plain HTTP, so the browser's origin is `http://intercom.localhost`. With `SECURE_PROXY_SSL_HEADER` set, Django expects `https://` and the form fails with `Origin checking failed - http://intercom.localhost does not match any trusted origins.` That's why `compose.yaml` sets `TRUST_X_FORWARDED_PROTO=false`. Leave it at its default (`true`) in production.
-
-## Run your own proxy instead (Caddy)
-
-```bash
-DOMAINS_PROVIDER=caddy TRUST_X_FORWARDED_PROTO=true docker compose --profile diy up --build
-```
-
-Add `intercom.localhost` in the dashboard, click "Check DNS", then:
-
-```bash
-curl -k https://intercom.localhost/
-```
-
-Caddy asks `/caddy/ask` before issuing a certificate, and only active domains get one. It passes the original `Host` header on, so the middleware works as is. Locally it uses Caddy's internal CA, hence `-k`. In production you'd remove `internal` from the `Caddyfile`, run it on a server with a static IP, and then own certificate storage, renewals, rate limits and monitoring yourself.
+Production always sends `X-Forwarded-Proto: https`. The mock proxy speaks plain HTTP, so the browser's origin is `http://intercom.localhost`, and if the mock claimed `https`, Django would expect an `https://` origin and fail the form with `Origin checking failed - http://intercom.localhost does not match any trusted origins.` That's why `compose.yaml` sets `SCD_MOCK_FORWARDED_PROTO=http`.
 
 ## Use it with your SaaS Custom Domains account
 
 1. [Create an API token](https://app.saascustomdomains.com/api_tokens) and an upstream pointing at your deployed app (`SaasDomains().create_upstream("app.yourapp.com")` from `python manage.py shell`, or the dashboard).
-2. Set the environment variables from `.env.example`: `SCD_API_TOKEN`, `SCD_ACCOUNT_UUID`, `SCD_UPSTREAM_UUID`, `PROXY_AUTH_TOKEN` (the upstream's auth token), `SCD_WEBHOOK_TOKEN` (from the webhook you create in the dashboard), `APP_HOSTS`, `APP_DOMAIN` and `SECRET_KEY`. Set `DEBUG=false` and `TRUST_X_FORWARDED_PROTO=true`.
+2. Set the environment variables from `.env.example`: `SCD_API_TOKEN`, `SCD_ACCOUNT_UUID`, `SCD_UPSTREAM_UUID`, `PROXY_AUTH_TOKEN` (the upstream's auth token), `SCD_WEBHOOK_TOKEN` (from the webhook you create in the dashboard), `APP_HOSTS`, `APP_DOMAIN` and `SECRET_KEY`. Set `DEBUG=false`.
 3. Remove `SCD_API_URL` so the client talks to the real API.
 
 Your customers point a CNAME at `in.saascustomdomains.com` (or A records at our two static IPs for a root domain). See the [docs](https://docs.saascustomdomains.com).
@@ -152,9 +142,8 @@ CI runs both on every push and once a week, so a new Django release that breaks 
 | Django | 6.1.2 |
 | Python | 3.13 |
 | requests | 2.34.2 |
-| dnspython | 2.9.0 |
 
-Last checked: 2026-10-28.
+Last checked: 2026-10-29.
 
 ## Not production-ready on purpose
 

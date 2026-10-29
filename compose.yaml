@@ -1,26 +1,18 @@
-# docker compose up                       app + SaaS Custom Domains mock
-# DOMAINS_PROVIDER=caddy TRUST_X_FORWARDED_PROTO=true \
-#   docker compose --profile diy up       app + your own Caddy instead
+# docker compose up    the app + a local stand-in for SaaS Custom Domains
 services:
   app:
     build: .
     ports: ["${APP_PORT:-8000}:8000"]
     environment:
-      # "app" is how the mock (webhooks) and Caddy reach this container.
+      # "app" is how the mock (webhooks) reaches this container.
       APP_HOSTS: localhost,app
       APP_DOMAIN: statuspage.com
-      DOMAINS_PROVIDER: ${DOMAINS_PROVIDER:-saascustomdomains}
       SCD_API_URL: http://scd-mock:4010
       SCD_API_TOKEN: scd_test_token
       SCD_ACCOUNT_UUID: acc_local
       SCD_UPSTREAM_UUID: upstream_local
       PROXY_AUTH_TOKEN: local_proxy_token
       SCD_WEBHOOK_TOKEN: local_webhook_token
-      # The mock proxy speaks plain HTTP but sends X-Forwarded-Proto:
-      # https, like production. Trusting it locally would make Django
-      # expect https:// origins on forms. Caddy really is HTTPS, so the
-      # diy profile needs this set to true.
-      TRUST_X_FORWARDED_PROTO: ${TRUST_X_FORWARDED_PROTO:-false}
     volumes: [data:/app/data]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/up')"]
@@ -36,23 +28,19 @@ services:
       - "${SCD_MOCK_API_PORT:-4010}:4010"
       - "${SCD_MOCK_PROXY_PORT:-80}:4080"
     environment:
-      SCD_MOCK_UPSTREAM_HOST: app
+      # host.docker.internal when the app runs outside Docker
+      SCD_MOCK_UPSTREAM_HOST: ${SCD_MOCK_UPSTREAM_HOST:-app}
       SCD_MOCK_UPSTREAM_PORT: 8000
       SCD_MOCK_UPSTREAM_AUTH_TOKEN: local_proxy_token
-      SCD_MOCK_WEBHOOK_URL: http://app:8000/webhooks/saas-domains
+      SCD_MOCK_WEBHOOK_URL: ${SCD_MOCK_WEBHOOK_URL:-http://app:8000/webhooks/saas-domains}
       SCD_MOCK_WEBHOOK_TOKEN: local_webhook_token
+      # The mock speaks plain HTTP, so say so: Django's CSRF check
+      # compares the browser's http:// origin with the request scheme.
+      # Production sends https.
+      SCD_MOCK_FORWARDED_PROTO: http
       # Test domains under .test count as pointed at the proxy.
       SCD_MOCK_VALID_HOSTS: "*.test"
-
-  # Run the proxy yourself: Caddy with on-demand TLS.
-  caddy:
-    image: caddy:2
-    profiles: [diy]
-    ports: ["${CADDY_PORT:-443}:443"]
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy:/data
+    extra_hosts: ["host.docker.internal:host-gateway"]
 
 volumes:
   data:
-  caddy:

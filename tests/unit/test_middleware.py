@@ -26,7 +26,8 @@ def test_pending_and_unknown_domains_get_404(client, domains):
 
 def test_custom_domains_only_see_status_page_urls(client, domains):
     host = {"Host": "status.intercom.com"}
-    assert client.get("/caddy/ask?domain=x.com", headers=host).status_code == 404
+    assert client.get("/", headers=host).status_code == 200
+    assert client.get("/webhooks/saas-domains", headers=host).status_code == 404
     assert client.post("/domains/1/remove", headers=host).status_code == 404
 
 

@@ -16,7 +16,6 @@ from .forms import AddDomainForm
 from .models import CustomDomain
 from .saas_domains import api_error
 from .services import add_custom_domain, check_dns, remove_custom_domain
-from .utils import normalize_host
 
 logger = logging.getLogger(__name__)
 
@@ -68,16 +67,6 @@ def check_domain(request, domain_id):
 def remove_domain(request, domain_id):
     remove_custom_domain(get_object_or_404(CustomDomain, pk=domain_id))
     return redirect("dashboard")
-
-
-def caddy_ask(request):
-    # Caddy calls this before issuing a certificate on demand
-    # (DOMAINS_PROVIDER=caddy). 200 = go ahead, anything else = refuse.
-    host = normalize_host(request.GET.get("domain", ""))
-    known = CustomDomain.objects.filter(
-        host=host, status=CustomDomain.Status.ACTIVE
-    ).exists()
-    return HttpResponse(status=200 if known else 404)
 
 
 STATUS_BY_EVENT = {

@@ -52,8 +52,6 @@ class CustomDomain(models.Model):
     def label(self):
         if self.status != self.Status.ACTIVE:
             return "Waiting for DNS"
-        # With your own Caddy, the certificate is issued on the first
-        # HTTPS request, so an active domain is live.
-        if self.https_ready or settings.DOMAINS_PROVIDER == "caddy":
+        if self.https_ready:
             return "Live"
         return "DNS OK, waiting for HTTPS"

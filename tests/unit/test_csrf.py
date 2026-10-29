@@ -96,14 +96,19 @@ def test_without_secure_proxy_ssl_header_the_origin_check_fails(
     assert ORIGIN_FAILED.format("https://status.intercom.com") in caplog.text
 
 
-def test_plain_http_proxy_needs_secure_proxy_ssl_header_off(
-    domains, settings, caplog
+def test_a_plain_http_proxy_must_say_so_in_x_forwarded_proto(
+    domains, caplog
 ):
-    # The local mock proxy speaks HTTP but sends X-Forwarded-Proto: https.
+    # The local mock proxy speaks plain HTTP, so the browser's origin is
+    # http://. Claiming https makes Django expect an https:// origin.
     with caplog.at_level(logging.WARNING, logger="django.security.csrf"):
         res = subscribe(origin="http://status.intercom.com")
     assert res.status_code == 403
     assert ORIGIN_FAILED.format("http://status.intercom.com") in caplog.text
 
-    settings.SECURE_PROXY_SSL_HEADER = None
-    assert subscribe(origin="http://status.intercom.com").status_code == 200
+    # What compose.yaml does: SCD_MOCK_FORWARDED_PROTO=http.
+    res = subscribe(
+        origin="http://status.intercom.com",
+        **{"X-Forwarded-Proto": "http"},
+    )
+    assert res.status_code == 200

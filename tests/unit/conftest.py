@@ -16,7 +16,6 @@ def env(monkeypatch, settings):
     monkeypatch.setenv("SCD_UPSTREAM_UUID", "upstream_local")
     settings.APP_HOSTS = ["app.statuspage.com", "localhost", "testserver", "app"]
     settings.APP_DOMAIN = "statuspage.com"
-    settings.DOMAINS_PROVIDER = "saascustomdomains"
     settings.SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 

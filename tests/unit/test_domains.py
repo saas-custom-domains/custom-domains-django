@@ -3,7 +3,7 @@ import requests
 from django.core.exceptions import ValidationError
 from django.test import RequestFactory
 
-from domains import dns, services
+from domains import services
 from domains.models import CustomDomain
 from domains.saas_domains import SaasDomains
 from domains.utils import host_from, normalize_host
@@ -26,15 +26,6 @@ def test_host_from_prefers_x_served_for(settings):
         "/", headers={"Host": "app.statuspage.com", "X-Served-For": "status.intercom.com"}
     )
     assert host_from(request) == "status.intercom.com"
-
-
-def test_points_to_us(monkeypatch):
-    assert dns.points_to_us("intercom.localhost")
-    found = {("a.example", "CNAME"): {"in.statuspage.com"}, ("b.example", "A"): {"192.0.2.1"}}
-    monkeypatch.setattr(dns, "records", lambda host, rtype: found.get((host, rtype), set()))
-    assert dns.points_to_us("a.example")
-    assert dns.points_to_us("b.example")
-    assert not dns.points_to_us("c.example")
 
 
 @pytest.fixture
@@ -98,17 +89,6 @@ def test_add_keeps_no_row_if_the_api_fails(intercom, monkeypatch):
     with pytest.raises(requests.ConnectionError):
         services.add_custom_domain(intercom, "status.intercom.com")
     assert not CustomDomain.objects.exists()
-
-
-def test_caddy_mode_skips_the_api(intercom, api, settings):
-    settings.DOMAINS_PROVIDER = "caddy"
-    domain = services.add_custom_domain(intercom, "intercom.localhost")
-    assert services.check_dns(domain) == "valid"
-    domain.refresh_from_db()
-    assert domain.status == "active"
-    assert domain.label == "Live"
-    services.remove_custom_domain(domain)
-    assert api == []
 
 
 def test_check_dns_activates_the_domain(intercom, api):

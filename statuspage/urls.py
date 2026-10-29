@@ -21,7 +21,6 @@ urlpatterns = [
         views.remove_domain,
         name="remove_domain",
     ),
-    path("caddy/ask", views.caddy_ask),
     path("webhooks/saas-domains", views.saas_domains_webhook),
     path("up", views.up),
 ]
